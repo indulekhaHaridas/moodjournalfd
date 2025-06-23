@@ -18,14 +18,25 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { getUserMoodAnalysisApi } from "../../../services/allApi";
 
-const COLORS = [
-  "#00C49F", // Happy
-  "#36A2EB", // Calm
-  "#FF8042", // Angry
-  "#FFBB28", // Anxious
-  "#9C27B0", // Sad
-  "#FF6384", // Tired
-];
+// ---- Mood helpers --------------------------------------------------------- //
+const COLOR_MAP = {
+  Happy:   "#00C49F",
+  Calm:    "#36A2EB",
+  Angry:   "#FF8042",
+  Anxious: "#FFBB28",
+  Sad:     "#9C27B0",
+  Tired:   "#FF6384",
+};
+
+const EMOJI_MAP = {
+  Happy: "😊",
+  Calm: "😌",
+  Angry: "😠",
+  Anxious: "😰",
+  Sad: "😢",
+  Tired: "🥱",
+};
+// -------------------------------------------------------------------------- //
 
 function Analysis() {
   const [lineData, setLineData] = useState([]);
@@ -38,16 +49,19 @@ function Analysis() {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchAnalysis();
-    }
+    if (token) fetchAnalysis();
+    // eslint-disable-next-line
   }, []);
 
   const fetchAnalysis = async () => {
     try {
       const res = await getUserMoodAnalysisApi(reqHeader);
       if (res.status === 200) {
-        setLineData(res.data.lineData);
+        // sort newest → oldest so index 0 is the latest entry
+        const sortedLine = res.data.lineData.sort(
+          (a, b) => new Date(b.day) - new Date(a.day)
+        );
+        setLineData(sortedLine);
         setPieData(res.data.pieData);
       }
     } catch (err) {
@@ -55,19 +69,15 @@ function Analysis() {
     }
   };
 
+  // Helpers ---------------------------------------------------------------- //
   const mostFrequentMood = () =>
-    pieData.reduce(
-      (best, cur) => (cur.value > best.value ? cur : best),
-      { value: 0, name: "None" }
-    ).name;
-
-  const bestDay = () =>
-    lineData.length
-      ? lineData.reduce(
-          (best, cur) => (cur.Happy > best.Happy ? cur : best),
-          lineData[0]
-        ).day
+    pieData.length
+      ? pieData.reduce((best, cur) => (cur.value > best.value ? cur : best)).name
       : "—";
+
+  const latestEntryDay = () =>
+    lineData.length ? lineData[0].day : "—";
+  // ------------------------------------------------------------------------ //
 
   return (
     <>
@@ -79,11 +89,11 @@ function Analysis() {
             Your Mood Analysis
           </h2>
 
-          {/* Charts */}
+          {/* ---------------- Charts ---------------- */}
           <div className="flex flex-col lg:flex-row items-center justify-center gap-8 w-full">
             {/* Line Chart */}
             <div className="w-full h-64 sm:h-80 max-w-full lg:max-w-3xl">
-              {lineData.length ? (
+              {lineData.length > 1 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={lineData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -91,16 +101,21 @@ function Analysis() {
                     <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="Happy" stroke={COLORS[0]} />
-                    <Line type="monotone" dataKey="Calm" stroke={COLORS[1]} />
-                    <Line type="monotone" dataKey="Angry" stroke={COLORS[2]} />
-                    <Line type="monotone" dataKey="Anxious" stroke={COLORS[3]} />
-                    <Line type="monotone" dataKey="Sad" stroke={COLORS[4]} />
-                    <Line type="monotone" dataKey="Tired" stroke={COLORS[5]} />
+                    {Object.keys(COLOR_MAP).map((mood) => (
+                      <Line
+                        key={mood}
+                        type="monotone"
+                        dataKey={mood}
+                        stroke={COLOR_MAP[mood]}
+                        dot={{ r: 2 }}
+                      />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center text-gray-500">No mood trend data.</p>
+                <p className="text-center text-gray-500">
+                  Add another journal entry to see your mood trend.
+                </p>
               )}
             </div>
 
@@ -118,8 +133,11 @@ function Analysis() {
                       outerRadius={70}
                       label
                     >
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      {pieData.map((slice, i) => (
+                        <Cell
+                          key={i}
+                          fill={COLOR_MAP[slice.name] || "#8884d8"}
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -131,18 +149,27 @@ function Analysis() {
             </div>
           </div>
 
-          {/* Insights */}
+          {/* ---------------- Insights ---------------- */}
           <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            {/* Most-Frequent Mood */}
             <div className="bg-white rounded-xl shadow-md p-5">
               <h3 className="text-lg font-semibold text-indigo-600">
                 Most Frequent Mood
               </h3>
-              <p className="text-xl sm:text-2xl mt-2">😊 {mostFrequentMood()}</p>
+              <p className="text-xl sm:text-2xl mt-2">
+                {EMOJI_MAP[mostFrequentMood()] || "🤔"} {mostFrequentMood()}
+              </p>
             </div>
+
+            {/* Recent Entry */}
             <div className="bg-white rounded-xl shadow-md p-5">
-              <h3 className="text-lg font-semibold text-indigo-600">Best Day</h3>
-              <p className="text-xl sm:text-2xl mt-2">{bestDay()}</p>
+              <h3 className="text-lg font-semibold text-indigo-600">
+                Recent Entry
+              </h3>
+              <p className="text-xl sm:text-2xl mt-2">{latestEntryDay()}</p>
             </div>
+
+            {/* Tips */}
             <div className="bg-white rounded-xl shadow-md p-5">
               <h3 className="text-lg font-semibold text-indigo-600">Tips</h3>
               <p className="mt-2 text-gray-600 text-sm sm:text-base">
@@ -152,7 +179,7 @@ function Analysis() {
           </div>
         </div>
       ) : (
-        // Hero Section for Logged Out Users
+        /* -------- Hero for logged-out users -------- */
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 via-purple-50 to-pink-50 p-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -163,9 +190,9 @@ function Analysis() {
               See Your Emotional Patterns
             </h2>
             <p className="text-gray-600 mb-6 text-sm sm:text-base leading-relaxed">
-              Emotly helps you visualize your emotional trends through
+              Emotly helps you visualise your emotional trends through
               interactive charts. Sign up today and start your journey to
-              better self‑awareness.
+              better self-awareness.
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4">
