@@ -93,30 +93,30 @@ function Analysis() {
           <div className="flex flex-col lg:flex-row items-center justify-center gap-8 w-full">
             {/* Line Chart */}
             <div className="w-full h-64 sm:h-80 max-w-full lg:max-w-3xl">
-              {lineData.length > 1 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Legend />
-                    {Object.keys(COLOR_MAP).map((mood) => (
-                      <Line
-                        key={mood}
-                        type="monotone"
-                        dataKey={mood}
-                        stroke={COLOR_MAP[mood]}
-                        dot={{ r: 2 }}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-gray-500">
-                  Add another journal entry to see your mood trend.
-                </p>
-              )}
+         {lineData.length ? (
+  <ResponsiveContainer width="100%" height="100%">
+    <LineChart data={lineData}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="day" />
+      <YAxis allowDecimals={false} />
+      <Tooltip />
+      <Legend />
+      {Object.keys(COLOR_MAP).map((mood) => (
+        <Line
+          key={mood}
+          type="monotone"
+          dataKey={mood}
+          stroke={COLOR_MAP[mood]}
+          dot={{ r: 2 }}
+          isAnimationActive={false}
+        />
+      ))}
+    </LineChart>
+  </ResponsiveContainer>
+) : (
+  <p className="text-center text-gray-500">No mood data yet.</p>
+)}
+
             </div>
 
             {/* Pie Chart */}
